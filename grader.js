@@ -40,12 +40,16 @@ var cheerioHtmlFile = function(htmlfile) {
     return cheerio.load(fs.readFileSync(htmlfile));
 };
 
+var cheerioObject = function(obj) {
+    return cheerio.load(obj);
+}
+
 var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkHtmlFile = function(htmlfile, checksfile) {
-    $ = cheerioHtmlFile(htmlfile);
+var checkObject = function(cheeriofn, checksfile) {
+    $ = cheeriofn;
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -53,6 +57,10 @@ var checkHtmlFile = function(htmlfile, checksfile) {
         out[checks[ii]] = present;
     }
     return out;
+}
+
+var checkHtmlFile = function(htmlfile, checksfile) {
+    return checkObject(cheerioHtmlFile(htmlfile), checksfile);
 };
 
 var checkUrl = function(url, checksfile) {
@@ -63,20 +71,16 @@ var checkUrl = function(url, checksfile) {
 	    console.error('Error: ' + util.format(response.message));
 	    process.exit(1);
         } else {
-	    // Check page (in result)
-	    $ = cheerio.load(result);
-	    var checks = loadChecks(checksfile).sort();
-	    var out = {};
-	    for(var ii in checks) {
-		var present = $(checks[ii]).length > 0;
-		out[checks[ii]] = present;
-	    }
-	    var checkJson = out;
-
-	    var outJson = JSON.stringify(checkJson, null, 4);
-	    console.log(outJson);
+	    // Check page
+	    var checkJson = checkObject(cheerioObject(result), checksfile);
+	    logCheckResults(checkJson);
         }
     });
+}
+
+var logCheckResults = function(checkJson) {
+    var outJson = JSON.stringify(checkJson, null, 4);
+    console.log(outJson);
 }
 
 var clone = function(fn) {
@@ -98,8 +102,7 @@ if(require.main == module) {
     } else {
 	// Check HTML file
 	var checkJson = checkHtmlFile(program.file, program.checks);
-	var outJson = JSON.stringify(checkJson, null, 4);
-	console.log(outJson);
+	logCheckResults(checkJson);
     }
 } else {
     exports.checkHtmlFile = checkHtmlFile;
